@@ -123,7 +123,7 @@ function Favourite() {
                                     </article>
                                 </div>
 
-                                <Link to={`/postpage/${data.postId}`}><h4 className="p-5 text-blue-500 font-medium hover:underline cursor-pointer">
+                                <Link to={`/postpage/${post.postId}`}><h4 className="p-5 text-blue-500 font-medium hover:underline cursor-pointer">
                                     View Blog
                                 </h4></Link>
                             </div>
