@@ -5,7 +5,6 @@ import Search from "./Search";
 import Popup from './Popup';
 import { Link } from 'react-router-dom'
 import comments from '../assets/comment.svg';
-import { Link } from 'react-router-dom'
 
 
 import { useEffect, useState } from "react";
