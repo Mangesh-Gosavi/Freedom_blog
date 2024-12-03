@@ -86,54 +86,56 @@ function Favourite() {
                 <Search />
                 <div className="flex flex-col p-5">
                     <h2 className="text-left font-semibold text-xl mb-5 md:text-2xl">Your Favourite Blogs</h2>
-                    {favoritePosts.length > 0 ? (
-                        favoritePosts.map(post => (
-                            <div key={post._id} className="flex flex-col gap-5 w-full h-80 shadow-2xl border rounded-lg overflow-hidden">
-                                <div className="flex justify-between w-full p-3 items-center gap-4 bg-slate-200">
-                                    <div className="flex gap-2">
-                                        <img
-                                            className="h-7 w-7 rounded-full"
-                                            src={img}
-                                            alt="User avatar"
-                                        />
-                                        <h1 className="text-sm md:text-lg xl:text-2xl">
-                                            <span className="font-normal">{post.email}</span>
-                                        </h1>
+                    <div className="flex flex-col gap-y-5">
+                        {favoritePosts.length > 0 ? (
+                            favoritePosts.map(post => (
+                                <div key={post._id} className="flex flex-col w-full h-80 shadow-2xl border rounded-lg overflow-hidden">
+                                    <div className="flex justify-between w-full p-3 items-center gap-4 bg-slate-200">
+                                        <div className="flex gap-2">
+                                            <img
+                                                className="h-7 w-7 rounded-full"
+                                                src={img}
+                                                alt="User avatar"
+                                            />
+                                            <h1 className="text-sm md:text-lg xl:text-2xl">
+                                                <span className="font-normal">{post.email}</span>
+                                            </h1>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Link to={`/postpage/${post.postId}`}><img
+                                                className="h-7 w-7 "
+                                                src={comments}
+                                                alt="Comments"
+                                            /></Link>
+                                            <img
+                                                className="h-7 w-7 bg-blend-color-burn cursor-pointer"
+                                                src={save}
+                                                onClick={() => handleremove(post.postId, post.email)}
+                                                alt="Saved icon"
+                                            />
+                                        </div>
                                     </div>
-                                    <div className="flex gap-2">
-                                        <Link to={`/postpage/${post.postId}`}><img
-                                            className="h-7 w-7 "
-                                            src={comments}
-                                            alt="User avatar"
-                                        /></Link>
-                                        <img
-                                            className="h-7 w-7 bg-blend-color-burn cursor-pointer"
-                                            src={save}
-                                            onClick={() => handleremove(post.postId, post.email)}
-                                            alt="Saved icon"
-                                        />
+                                    <h1 className="text-sm md:text-2xl">
+                                        <span className="font-semibold">{post.title}</span>
+                                    </h1>
+                                    <div className="flex-1 p-5 overflow-hidden overflow-ellipsis">
+                                        <article className="text-sm md:text-lg xl:text-2xl text-gray-700 h-full line-clamp-4">
+                                            {post.content}
+                                        </article>
                                     </div>
+                                    <h4 className="p-5 text-blue-500 font-medium hover:underline cursor-pointer">
+                                        View Blog
+                                    </h4>
                                 </div>
-                                <h1 className="text-sm md:text-2xl">
-                                    <span className="font-semibold">{post.title}</span>
-                                </h1>
-                                <div className="flex-1 p-5 overflow-hidden overflow-ellipsis">
-                                    <article className="text-sm md:text-lg xl:text-2xl text-gray-700 h-full line-clamp-4">
-                                        {post.content}
-                                    </article>
-                                </div>
-
-                                <h4 className="p-5 text-blue-500 font-medium hover:underline cursor-pointer">
-                                    more..
-                                </h4>
-                            </div>
-                        ))
-                    ) : (
-                        <p>No favorite posts found.</p>
-                    )}
+                            ))
+                        ) : (
+                            <p>No favorite posts found.</p>
+                        )}
+                    </div>
                 </div>
                 <div>{showPopup && <Popup message={popupMessage} onClose={closePopup} />}</div>
             </div>
+
         </>
     );
 }
