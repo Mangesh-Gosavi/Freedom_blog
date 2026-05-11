@@ -6,6 +6,8 @@ import Favourite from "./Pages/Favourite";
 import Addblog from "./Pages/Addblog";
 import Archive from "./Pages/Archive";
 import Postpage from "./Pages/Postpage";
+import Forgot from "./Pages/Forgot";
+import Newpassword from "./Pages/Newpassword";
 
 function App() {
   return (
@@ -22,6 +24,8 @@ function App() {
             <Route path="/favourite" element={<Favourite />} />
             <Route path="/addblog" element={<Addblog />} />
             <Route path="/archive" element={<Archive />} />
+            <Route path="/forgot" element={<Forgot />} />
+            <Route path="/newpassword" element={<Newpassword />} />
 
           </Routes>
         </div>

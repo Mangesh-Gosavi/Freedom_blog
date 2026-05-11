@@ -7,12 +7,15 @@ import { useEffect, useState } from "react";
 import { jwtDecode } from "jwt-decode";
 import { Link } from 'react-router-dom'
 import comments from '../assets/comment.svg';
+import IconButton from "../components/IconButton";
+import { useKeyedLoading } from "../hooks/useLoading";
+import { API_BASE_URL } from "../config/config";
 
 function Archive() {
     const [postdata, setPostdata] = useState([]);
-    const [email, setEmail] = useState("");
     const [showPopup, setShowPopup] = useState(false);
     const [popupMessage, setPopupMessage] = useState('');
+    const { isLoading, withLoading } = useKeyedLoading();
 
     useEffect(() => {
         const init = async () => {
@@ -22,10 +25,8 @@ function Archive() {
 
                 const decoded = jwtDecode(token);
                 const userEmail = decoded.email;
-                // console.log(userEmail)
-                setEmail(userEmail);
 
-                const response = await fetch("https://blog-server-7cur.onrender.com/allposts", {
+                const response = await fetch(`${API_BASE_URL}/allposts`, {
                     method: "GET",
                     headers: {
                         "Accept": "application/json",
@@ -34,10 +35,7 @@ function Archive() {
                 });
 
                 const data = await response.json();
-                // console.log("Fetched Posts:", data.data);
-
                 const userPosts = data.data.filter(post => post.email === userEmail);
-                //    console.log("Filtered User Posts:", userPosts);
                 setPostdata(userPosts);
             } catch (error) {
                 console.error("Error fetching posts:", error);
@@ -46,42 +44,39 @@ function Archive() {
         init();
     }, []);
 
-    const handleremove = async (postId) => {
-        console.log(`Removing post with ID: ${postId}`);
+    const handleremove = (postId) =>
+        withLoading(postId, async () => {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_BASE_URL}/removepost`, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ postId }),
+                });
 
-        try {
-            const token = localStorage.getItem('token');
-            const response = await fetch("https://blog-server-7cur.onrender.com/removepost", {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ postId }),
-            });
-
-            const data = await response.json();
-            if (data.success) {
-                console.log("Post removed from favorites");
+                const data = await response.json();
+                if (data.success) {
+                    setShowPopup(true);
+                    setPopupMessage("Post removed");
+                    setPostdata(prevPosts => prevPosts.filter(post => post.postId !== postId));
+                } else {
+                    setShowPopup(true);
+                    setPopupMessage(data.message || "Error removing post");
+                }
+            } catch (error) {
+                console.error("Error removing post:", error);
                 setShowPopup(true);
-                setPopupMessage("Post removed from favorites");
-                setFavoritePosts(prevPosts => prevPosts.filter(post => post._id !== postId));
-            } else {
-                setShowPopup(true);
-                setPopupMessage("Error removing from favorites:");
-                console.error("Error removing from favorites:", data.message);
+                setPopupMessage("Error removing post");
             }
-        } catch (error) {
-            console.error("Error removing from favorites:", error);
-        }
-    };
+        });
 
     const closePopup = () => {
         setShowPopup(false);
         setPopupMessage('');
     };
-
-
 
     return (
         <>
@@ -103,17 +98,17 @@ function Archive() {
                                         <span className="font-normal">{data.email}</span>
                                     </h1>
                                 </div>
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 items-center">
                                     <Link to={`/postpage/${data.postId}`}><img
                                         className="h-7 w-7 "
                                         src={comments}
-                                        alt="User avatar"
+                                        alt="Comments"
                                     /></Link>
-                                    <img
-                                        className="h-7 w-7 bg-blend-color-burn cursor-pointer"
-                                        src={remove}
+                                    <IconButton
+                                        icon={remove}
+                                        alt="Remove post"
+                                        loading={isLoading(data.postId)}
                                         onClick={() => handleremove(data.postId)}
-                                        alt="Saved icon"
                                     />
                                 </div>
                             </div>

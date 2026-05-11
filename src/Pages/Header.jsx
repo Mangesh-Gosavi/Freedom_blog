@@ -1,31 +1,37 @@
 import menu from '../assets/align-justify.svg';
 import cross from '../assets/x.svg';
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import LoadingButton from "../components/LoadingButton";
+import Spinner from "../components/Spinner";
+import { useLoading } from "../hooks/useLoading";
+import { API_BASE_URL } from "../config/config";
 
 function Header() {
     const [sidebar, setSidebarMenubar] = useState(false);
+    const navigate = useNavigate();
+    const { loading: loggingOut, withLoading } = useLoading();
 
-    const logout = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            const response = await fetch('https://blog-server-7cur.onrender.com/logout', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
+    const logout = () =>
+        withLoading(async () => {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_BASE_URL}/logout`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                if (response.ok) {
+                    localStorage.removeItem('token');
+                    navigate("/");
+                } else {
+                    console.error("Logout failed");
                 }
-            });
-            if (response.ok) {
-                localStorage.removeItem('token');
-                window.location.href = "/login";
-            } else {
-                console.error("Logout failed");
+            } catch (error) {
+                console.error("Error during logout:", error);
             }
-        } catch (error) {
-            console.error("Error during logout:", error);
-        }
-    };
-    
+        });
 
     return (
         <>
@@ -34,7 +40,7 @@ function Header() {
                     Freedom
                 </h1>
 
-                <ul className="hidden md:flex gap-6 list-none">
+                <ul className="hidden md:flex gap-6 list-none items-center">
                     <Link to="/home">
                         <li className="p-2 hover:scale-110 transition duration-300 cursor-pointer">Home</li>
                     </Link>
@@ -47,9 +53,15 @@ function Header() {
                     <Link to="/archive">
                         <li className="p-2 hover:scale-110 transition duration-300 cursor-pointer">Archive</li>
                     </Link>
-                    <Link to="/">
-                        <button type='submit' onClick={() => setSidebarMenubar(false)} className="bg-red-600 p-2 rounded-lg hover:scale-110 transition duration-300 cursor-pointer">Logout</button>
-                    </Link>
+                    <LoadingButton
+                        type="button"
+                        loading={loggingOut}
+                        loadingText="Logging out..."
+                        onClick={logout}
+                        className="bg-red-600 text-white p-2 rounded-lg hover:scale-110 transition duration-300"
+                    >
+                        Logout
+                    </LoadingButton>
                 </ul>
 
                 {!sidebar ? (
@@ -84,17 +96,20 @@ function Header() {
                         <Link to="/archive" onClick={() => setSidebarMenubar(false)}>
                             <li className="cursor-pointer hover:font-semibold">Archive</li>
                         </Link>
-                        <Link to="/">
-                            <li
-                                onClick={() => {
-                                    setSidebarMenubar(false); 
-                                    logout(); 
-                                }}
-                                className="cursor-pointer hover:font-semibold"
-                            >
-                                Logout
-                            </li>
-                        </Link>
+                        <li
+                            aria-busy={loggingOut}
+                            onClick={() => {
+                                if (loggingOut) return;
+                                setSidebarMenubar(false);
+                                logout();
+                            }}
+                            className={`flex items-center gap-2 hover:font-semibold ${
+                                loggingOut ? "cursor-not-allowed opacity-70" : "cursor-pointer"
+                            }`}
+                        >
+                            {loggingOut && <Spinner size="h-4 w-4" color="border-gray-500" />}
+                            {loggingOut ? "Logging out..." : "Logout"}
+                        </li>
                     </ul>
                 </div>
             )}

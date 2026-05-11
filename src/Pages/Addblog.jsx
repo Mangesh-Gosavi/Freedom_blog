@@ -2,45 +2,49 @@ import Header from "./Header";
 import { useForm } from "react-hook-form";
 import Popup from './Popup';
 import { useState } from 'react';
+import LoadingButton from "../components/LoadingButton";
+import { useLoading } from "../hooks/useLoading";
+import { API_BASE_URL } from "../config/config";
 
 function Addblog() {
-    const { register, handleSubmit, reset, formState } = useForm();
+    const userEmail = localStorage.getItem('email') || '';
+    const { register, handleSubmit, reset } = useForm({
+        defaultValues: { email: userEmail, title: '', content: '' },
+    });
     const [showPopup, setShowPopup] = useState(false);
     const [popupMessage, setPopupMessage] = useState('');
+    const { loading, withLoading } = useLoading();
 
-    // Handle form submission
     const onSubmitHandler = async (formData) => {
-        console.log(formData);
-        const token = localStorage.getItem('token');
-        console.log("Token retrieved:", token);
-        try {
-            const response = await fetch("https://blog-server-7cur.onrender.com/addpost", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify(formData),
-            });
+        await withLoading(async () => {
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch(`${API_BASE_URL}/addpost`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify(formData),
+                });
 
-            const result = await response.json();
+                const result = await response.json();
 
-            if (!response.ok) {
+                if (!response.ok) {
+                    setShowPopup(true);
+                    setPopupMessage(result.message || 'Something went wrong!');
+                    return;
+                }
+
+                reset({ email: userEmail, title: '', content: '' });
                 setShowPopup(true);
-                setPopupMessage(result.message || 'Something went wrong!');
-                throw new Error(`HTTP error! status: ${response.status}`);
+                setPopupMessage(result.message || 'Post added successfully');
+            } catch (error) {
+                console.error("Error during fetch:", error);
+                setShowPopup(true);
+                setPopupMessage('An error occurred while adding the post.');
             }
-
-            // Reset the form fields
-            reset(); 
-
-            setShowPopup(true);
-            setPopupMessage(result.message || 'Post added successfully');
-        } catch (error) {
-            console.error("Error during fetch:", error);
-            setShowPopup(true);
-            setPopupMessage('An error occurred while adding the post.');
-        }
+        });
     };
 
     const closePopup = () => {
@@ -58,9 +62,10 @@ function Addblog() {
                         <label>Email </label>
                         <input
                             {...register("email")}
-                            className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed focus:outline-none"
                             type="email"
                             placeholder="Enter Email"
+                            readOnly
                             required
                         />
                         <label>Topic </label>
@@ -79,12 +84,14 @@ function Addblog() {
                             required
                         />
                         <div className="flex justify-evenly w-full">
-                            <button
+                            <LoadingButton
                                 type="submit"
+                                loading={loading}
+                                loadingText="Uploading..."
                                 className="w-4/5 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow transition duration-300"
                             >
                                 Upload
-                            </button>
+                            </LoadingButton>
                         </div>
                     </form>
                     <div>{showPopup && <Popup message={popupMessage} onClose={closePopup} />}</div>

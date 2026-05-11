@@ -3,6 +3,9 @@ import { useEffect, useState } from "react";
 import Header from "./Header";
 import { jwtDecode } from "jwt-decode";
 import { useParams } from 'react-router-dom'
+import LoadingButton from "../components/LoadingButton";
+import { useLoading } from "../hooks/useLoading";
+import { API_BASE_URL } from "../config/config";
 
 function Postpage() {
     const { postId } = useParams();
@@ -11,11 +14,12 @@ function Postpage() {
     const [newComment, setNewComment] = useState("");
     const [showPopup, setShowPopup] = useState(false);
     const [popupMessage, setPopupMessage] = useState('');
+    const { loading: posting, withLoading } = useLoading();
 
     useEffect(() => {
         const fetchBlog = async () => {
             try {
-                const response = await fetch(`https://blog-server-7cur.onrender.com/blog/${postId}`);
+                const response = await fetch(`${API_BASE_URL}/blog/${postId}`);
                 const data = await response.json();
                 setBlog(data.blog);
                 setComments(data.comments || []);
@@ -23,39 +27,47 @@ function Postpage() {
                 console.error("Error fetching blog:", error);
             }
         };
-    
-        console.log(comments);  
+
         fetchBlog();
-    }, []);
-    
+    }, [postId]);
 
-    // Handle adding a new comment
+
     const handleAddComment = async () => {
-        if (!newComment.trim()) return;
+        if (!newComment.trim() || !blog) return;
 
-        try {
-            const token = localStorage.getItem('token');
-            const decoded = jwtDecode(token);
-            const userEmail = decoded.email;
-            const response = await fetch("https://blog-server-7cur.onrender.com/addreviews", {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ postId: blog.postId, email:userEmail, text: newComment }),
-            });
+        await withLoading(async () => {
+            try {
+                const token = localStorage.getItem('token');
+                const decoded = jwtDecode(token);
+                const userEmail = decoded.email;
+                const response = await fetch(`${API_BASE_URL}/addreviews`, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ postId: blog.postId, email: userEmail, text: newComment }),
+                });
 
-            const data = await response.json();
-            if (data.success) {
+                const data = await response.json();
+                if (data.success) {
+                    setShowPopup(true);
+                    setPopupMessage(data.message);
+                    setComments((prev) => [
+                        ...prev,
+                        { postId: `${blog.postId}-${Date.now()}`, email: userEmail, text: newComment },
+                    ]);
+                    setNewComment("");
+                } else {
+                    setShowPopup(true);
+                    setPopupMessage(data.message || "Error adding comment");
+                }
+            } catch (error) {
+                console.error("Error adding comment:", error);
                 setShowPopup(true);
-                setPopupMessage(data.message);
-            } else {
-                console.error("Error adding comment:", data.message);
+                setPopupMessage("Error adding comment");
             }
-        } catch (error) {
-            console.error("Error adding comment:", error);
-        }
+        });
     };
 
     const closePopup = () => {
@@ -108,12 +120,14 @@ function Postpage() {
                             value={newComment}
                             onChange={(e) => setNewComment(e.target.value)}
                         ></textarea>
-                        <button
-                            className="mt-3 px-5 py-2 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600"
+                        <LoadingButton
+                            loading={posting}
+                            loadingText="Posting..."
                             onClick={handleAddComment}
+                            className="mt-3 px-5 py-2 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600"
                         >
                             Add Comment
-                        </button>
+                        </LoadingButton>
                     </div>
                     <div>{showPopup && <Popup message={popupMessage} onClose={closePopup} />}</div>
                 </div>

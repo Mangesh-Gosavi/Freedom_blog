@@ -5,20 +5,22 @@ import Search from "./Search";
 import Popup from './Popup';
 import { Link } from 'react-router-dom'
 import comments from '../assets/comment.svg';
-
-
 import { useEffect, useState } from "react";
+import IconButton from "../components/IconButton";
+import { useKeyedLoading } from "../hooks/useLoading";
+import { API_BASE_URL } from "../config/config";
 
 function Favourite() {
     const [favoritePosts, setFavoritePosts] = useState([]);
     const [showPopup, setShowPopup] = useState(false);
     const [popupMessage, setPopupMessage] = useState('');
+    const { isLoading, withLoading } = useKeyedLoading();
 
     useEffect(() => {
         const fetchFavorites = async () => {
             try {
                 const token = localStorage.getItem('token');
-                const response = await fetch("https://blog-server-7cur.onrender.com/favorites", {
+                const response = await fetch(`${API_BASE_URL}/favorites`, {
                     method: "GET",
                     headers: {
                         "Authorization": `Bearer ${token}`,
@@ -32,8 +34,6 @@ function Favourite() {
                 const data = await response.json();
                 if (data.success) {
                     setFavoritePosts(data.data);
-                } else {
-                    console.log("No favorite posts found");
                 }
             } catch (error) {
                 console.error("Error fetching favorites:", error);
@@ -43,36 +43,34 @@ function Favourite() {
         fetchFavorites();
     }, []);
 
-    // Handle removing a post from favorites
-    const handleremove = async (postId, email) => {
-        console.log(`Removing post with ID: ${postId}`);
+    const handleremove = (postId, email) =>
+        withLoading(postId, async () => {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_BASE_URL}/removefav`, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ postId, email }),
+                });
 
-        try {
-            const token = localStorage.getItem('token');
-            const response = await fetch("https://blog-server-7cur.onrender.com/removefav", {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ postId, email }),
-            });
-
-            const data = await response.json();
-            if (data.success) {
-                console.log("Post removed from favorites");
+                const data = await response.json();
+                if (data.success) {
+                    setShowPopup(true);
+                    setPopupMessage("Post removed from favorites");
+                    setFavoritePosts(prevPosts => prevPosts.filter(post => post.postId !== postId));
+                } else {
+                    setShowPopup(true);
+                    setPopupMessage(data.message || "Error removing from favorites");
+                }
+            } catch (error) {
+                console.error("Error removing from favorites:", error);
                 setShowPopup(true);
-                setPopupMessage("Post removed from favorites");
-                setFavoritePosts(prevPosts => prevPosts.filter(post => post._id !== postId));
-            } else {
-                setShowPopup(true);
-                setPopupMessage("Error removing from favorites:");
-                console.error("Error removing from favorites:", data.message);
+                setPopupMessage("Error removing from favorites");
             }
-        } catch (error) {
-            console.error("Error removing from favorites:", error);
-        }
-    };
+        });
 
     const closePopup = () => {
         setShowPopup(false);
@@ -100,17 +98,17 @@ function Favourite() {
                                             <span className="font-normal">{post.email}</span>
                                         </h1>
                                     </div>
-                                    <div className="flex gap-2">
+                                    <div className="flex gap-2 items-center">
                                         <Link to={`/postpage/${post.postId}`}><img
                                             className="h-7 w-7 "
                                             src={comments}
-                                            alt="User avatar"
+                                            alt="Comments"
                                         /></Link>
-                                        <img
-                                            className="h-7 w-7 bg-blend-color-burn cursor-pointer"
-                                            src={save}
+                                        <IconButton
+                                            icon={save}
+                                            alt="Remove from favorites"
+                                            loading={isLoading(post.postId)}
                                             onClick={() => handleremove(post.postId, post.email)}
-                                            alt="Saved icon"
                                         />
                                     </div>
                                 </div>

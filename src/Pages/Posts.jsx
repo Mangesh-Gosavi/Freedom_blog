@@ -6,13 +6,15 @@ import { useEffect, useState } from "react";
 import { jwtDecode } from "jwt-decode";
 import Popup from './Popup';
 import { Link } from 'react-router-dom'
+import IconButton from "../components/IconButton";
+import { useKeyedLoading } from "../hooks/useLoading";
+import { API_BASE_URL } from "../config/config";
 
 function Post() {
     const [postdata, setPostdata] = useState([]);
-    const [saved, setSaved] = useState(false);
-    const [email, setEmail] = useState("");
     const [showPopup, setShowPopup] = useState(false);
     const [popupMessage, setPopupMessage] = useState('');
+    const { isLoading, withLoading } = useKeyedLoading();
 
     useEffect(() => {
         const init = async () => {
@@ -20,9 +22,8 @@ function Post() {
                 const token = localStorage.getItem('token');
                 const decoded = jwtDecode(token);
                 const userEmail = decoded.email;
-                setEmail(userEmail);
 
-                const response = await fetch("https://blog-server-7cur.onrender.com/allposts", {
+                const response = await fetch(`${API_BASE_URL}/allposts`, {
                     method: "GET",
                     headers: {
                         "Accept": "application/json",
@@ -31,7 +32,8 @@ function Post() {
                 });
 
                 const data = await response.json();
-                const userPosts = data.data.filter(post => post.email !== userEmail)
+                const userPosts = data.data
+                    .filter(post => post.email !== userEmail)
                     .map(post => ({ ...post, saved: post.saved || false }));
                 setPostdata(userPosts);
             } catch (error) {
@@ -41,34 +43,39 @@ function Post() {
         init();
     }, []);
 
-    const handleSave = async (postId, email) => {
-        try {
-            const token = localStorage.getItem('token');
-            const response = await fetch(`https://blog-server-7cur.onrender.com/posts/${postId}/save`, {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ saved: !saved, email }),
-            });
+    const handleSave = (post) =>
+        withLoading(post.postId, async () => {
+            const nextSaved = !post.saved;
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_BASE_URL}/posts/${post.postId}/save`, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ saved: nextSaved, email: post.email }),
+                });
 
-            const data = await response.json();
-            if (data.success) {
+                const data = await response.json();
+                if (data.success) {
+                    setShowPopup(true);
+                    setPopupMessage(nextSaved ? "Post Saved" : "Post Unsaved");
+                    setPostdata(prev =>
+                        prev.map(p =>
+                            p.postId === post.postId ? { ...p, saved: nextSaved } : p
+                        )
+                    );
+                } else {
+                    setShowPopup(true);
+                    setPopupMessage(data.message || "Error saving post");
+                }
+            } catch (error) {
+                console.error("Error saving post:", error);
                 setShowPopup(true);
-                setPopupMessage("Post Saved");
-                setPostdata(prevPostData =>
-                    prevPostData.map(post =>
-                        post._id === postId ? { ...post, saved: !saved } : post
-                    )
-                );
-            } else {
-                console.error("Error saving post:", data.message);
+                setPopupMessage("Error saving post");
             }
-        } catch (error) {
-            console.error("Error saving post:", error);
-        }
-    };
+        });
 
     const closePopup = () => {
         setShowPopup(false);
@@ -90,27 +97,18 @@ function Post() {
                                 <span className="font-normal">{data.email}</span>
                             </h1>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 items-center">
                             <Link to={`/postpage/${data.postId}`}><img
                                 className="h-7 w-7 "
                                 src={comments}
-                                alt="User avatar"
+                                alt="Comments"
                             /></Link>
-                            {!data.saved ? (
-                                <img
-                                    className="h-7 w-7 bg-blend-color-burn"
-                                    src={save}
-                                    onClick={() => handleSave(data.postId, data.email)}
-                                    alt="Saved icon"
-                                />
-                            ) : (
-                                <img
-                                    className="h-7 w-7 bg-blend-color-burn"
-                                    src={unsave}
-                                    onClick={() => handleSave(data.postId, data.email)}
-                                    alt="Unsave icon"
-                                />
-                            )}
+                            <IconButton
+                                icon={data.saved ? unsave : save}
+                                alt={data.saved ? "Unsave post" : "Save post"}
+                                loading={isLoading(data.postId)}
+                                onClick={() => handleSave(data)}
+                            />
                         </div>
                     </div>
                     <h1 className="text-sm md:text-2xl font-semibold">
@@ -132,5 +130,3 @@ function Post() {
 }
 
 export default Post;
-
-
